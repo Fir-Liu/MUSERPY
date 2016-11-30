@@ -1,0 +1,20 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+
+from mayavi import mlab
+from scipy.integrate import odeint
+import numpy as np
+
+def lorenz(w,t,p,r,b):
+    x,y,z = w
+    return np.array([p*(y-x),x*(r-z)-y,x*y-b*z])
+
+t = np.arange(0,30,0.01)    
+track1 = odeint(lorenz,(0.0,1.00,0.0),t,args=(10.0,28.0,3.0))
+
+mlab.plot3d(track1[:,0],track1[:,1],track1[:,2],t,tube_radius=0.2)
+mlab.show()
