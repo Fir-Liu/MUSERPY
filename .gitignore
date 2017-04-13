@@ -10,3 +10,7 @@ Desktop.ini
 *.egg-info
 dist
 build
+
+#My configuaration:
+*.pro
+*.txt
