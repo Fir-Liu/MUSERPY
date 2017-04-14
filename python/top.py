@@ -7,7 +7,7 @@ Created on Sun Jul 17 13:05:05 2016
 
 #%%        
 import numpy as np
-import misc as mc
+import misc as mi
 import astropy.constants as con
 from astropy import units as u
 import matplotlib.pyplot as plt
@@ -52,8 +52,8 @@ UVMAX=max(uvwbl['u'].max(),uvwbl['v'].max())
 M = int(np.ceil(imsizecal(FOV,UVMAX)))
 #%%
 # read correlation data in
-filename = r'C:\MUSER_DATA\CSRH_20141111-122131_98335183'
-trange = ['2014-11-11 12:22:35', '2014-11-11 12:22:45']
+filename = r'D:\MUSER_Rawdata\20151101\MUSER-1\dat\20151101-1208'
+trange = ['2015-11-01 12:08:50', '2015-11-01 12:08:51']
 dout = ri.rdraw(filename,trange,tdec=0,array='m1', 
           nant=40,rfind=0,pol='LL')
 #%%

@@ -13,7 +13,8 @@ import rdin as ri
 #%%
 # printing for debug
 import logging
-reload(logging)
+import imp
+imp.reload(logging)
 #import numpy as np
 log_level = logging.DEBUG 
 log_format = '%(levelname)s:%(message)s'

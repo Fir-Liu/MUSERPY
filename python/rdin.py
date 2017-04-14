@@ -11,7 +11,8 @@ from astropy.time import Time
 import misc as mi
 #%%
 import logging
-reload(logging)
+import imp
+imp.reload(logging)
 #import numpy as np
 log_level = logging.DEBUG 
 log_format = '%(levelname)s:%(message)s'
@@ -71,14 +72,14 @@ def rdraw(filename,trange,tdec=0,array='m1', \
         acor_rd = mr.acor_rd_m2
         xcor_rd = mr.xcor_rd_m2
         dly_rd = mr.dly_rd_m2
-        print 'Array is set to MUSER-II'
+        print('Array is set to MUSER-II')
     else:
         gps_rd = mr.gps_rd_m1
         rftag_rd = mr.rftag_rd_m1
         acor_rd = mr.acor_rd_m1
         xcor_rd = mr.xcor_rd_m1        
         dly_rd = mr.dly_rd_m1
-        print 'Array is set to MUSER-I'    
+        print('Array is set to MUSER-I')    
     tr = Time(trange)
 #    logger.debug('tr is',tr)
     td = tr[1]-tr[0]
@@ -115,8 +116,8 @@ def rdraw(filename,trange,tdec=0,array='m1', \
             continue
     #tst = Time(mr.gps_rd_m1(fid, fr_off))
     if pos == -1:
-        print 'the observing mode should be no jumping, rfind \
-                is neglected'    
+        print('the observing mode should be no jumping, rfind \
+                is neglected')    
     else:        
         if pol == 'LL':
             fr_off = fr_off+pos
@@ -126,13 +127,13 @@ def rdraw(filename,trange,tdec=0,array='m1', \
     logger.debug('Frame starts from: %d',fr_off)
     logger.debug('Frame steps: %d',fr_step)        
     
-    print 'Time range is:', trange
-    print 'Number of Antenna:', nant
-    print 'Poloarization:', pol
-    print 'Rf band:', mi.ord2fr(rfind,array)
-    print 'Time bin interval:', tdec,'seconds'
-    print 'Time bins:', Nts
-    print 'Waiting....................'
+    print('Time range is:', trange)
+    print('Number of Antenna:', nant)
+    print('Poloarization:', pol)
+    print('Rf band:', mi.ord2fr(rfind,array))
+    print('{}{:3d}{:>10}'.format('Time bin interval:',tdec,'seconds'))
+    print('Time bins:', Nts)
+    print('Waiting....................')
     for nn in range(Nts):
 #        dout['time'][nn] = Time(mr.gps_rd_m1(fid, fr_off+nn*fr_step)).jd \
 #                            if (array=='m1') else Time(mr.gps_rd_m2(fid, fr_off+nn*fr_step)).jd
@@ -149,10 +150,15 @@ def rdraw(filename,trange,tdec=0,array='m1', \
             for kk in range(Nfreq):
 #                dout['x'][bl2ord[aa,aa+1:],kk,nn]=mr.xcor_rd_m1(fid, fr_off+nn*fr_step, kk, aa,range(aa+1,Nant)) \
 #                                                if(array=='m1') else mr.xcor_rd_m2(fid, fr_off+nn*fr_step, kk, aa,range(aa+1,Nant))
-                dout['x'][bl2ord[aa,aa+1:],kk,nn]=xcor_rd(fid, fr_off+nn*fr_step, kk, aa,range(aa+1,Nant)) 
+#                print('nn=',nn)
+#                print('aa=',aa)
+#                print('kk=',kk)
+#                print('fr_off=',fr_off)
+#                print('fr_step=',fr_step)
+                dout['x'][bl2ord[aa,aa+1:],kk,nn]=xcor_rd(fid, fr_off+nn*fr_step, kk, aa,list(range(aa+1,Nant))) 
     
     fid.close()
-    print 'Reading data is done.'             
+    print('Reading data is done.')             
     return dout
 
 #%% Test

@@ -7,19 +7,27 @@ Created on Mon Jul 18 15:18:54 2016
 import numpy as np
 
 def bl_tab(nant):
-    ''' Returns a two-dimensional array bl2ord that will translate
+    ''' Returns a two-dimensional array bl_tab that includes
         a pair of antenna indexes (antenna number - 1) to the ordinal
-        number of the baseline in the 'x' key.  Note bl2ord(i,j) = bl2ord(j,i),
-        and bl2ord(i,i) = -1.
+        number of the baseline in the 'x' key.  bl_tab[i,j] = bl_tab[j,i],
+        and bl_tab[k,k] = -1.
     '''
-    bl2ord = np.ones((nant,nant),dtype='int')*(-1)
+    bl_tab = np.ones((nant,nant),dtype='int')*(-1)
     k = 0
     for i in range(nant-1):
         for j in range(i+1,nant):
-            bl2ord[i,j] = k
-            bl2ord[j,i] = k
-            k+=1
-    return bl2ord
+            bl_tab[i,j] = k
+            bl_tab[j,i] = k
+            k = k + 1
+    return bl_tab
+
+def bl2ord(ant1,ant2,Nant):
+    ''' Returns the index of
+        a pair of antenna in in the 'x' key.  Note bl2ord(i,j,nant) = bl2ord(j,i,nant),
+        and bl2ord(k,k) = -1.
+    '''
+    return bl_tab(Nant)[ant1,ant2]
+
 
 def ind2bl(flind,nant):
     """
@@ -27,11 +35,11 @@ def ind2bl(flind,nant):
        return flagged baseline cross correlation pair like 
        [(1,2),(2,3)...]
     """
-    bl2ord = bl_tab(nant)
+#    bl2ord = bl_tab(nant)
     rclist = []
     for sk in list(flind):
-        indfl = np.where(bl2ord==sk)
-        rclist.append(zip(indfl[0],indfl[1])[0])    
+        indfl = np.where(bl_tab(nant)==sk)
+        rclist.append(tuple(indfl[0]))    
     return rclist
     
 def flagind(Nant,flaglist):
@@ -43,10 +51,10 @@ def flagind(Nant,flaglist):
         
     """
 #    Nant = 40
-    bl2ord = bl_tab(Nant)
+#    bl2ord = bl_tab(Nant)
     s1 = np.zeros((len(flaglist),Nant))
     for idx,ind in enumerate(flaglist):
-        s1[idx,:] = bl2ord[ind,:]
+        s1[idx,:] = bl_tab(Nant)[ind,:]
     s = s1[0,:]    
     for j in range(s1.shape[0]-1):
         s = np.array(list(set(s)|set(s1[j+1,:])))
@@ -70,8 +78,8 @@ frdict2 = {'2.0G-2.4G':0,'2.4G-2.8G':1, \
           '12.8G-13.2G':27,'13.2G-13.6G':28,'13.6G-14.0G':29,\
           '14.0G-14.4G':30,'14.4G-14.8G':31,'14.6G-15.0G':32}
 
-infrdict1 = {v:k for k,v in frdict1.iteritems()}
-infrdict2 = {v:k for k,v in frdict2.iteritems()}
+infrdict1 = {v:k for k,v in frdict1.items()}
+infrdict2 = {v:k for k,v in frdict2.items()}
 
 def fr2ord(rffreq,array='m1'):
     ''' Returns the value in list range(0,33) that is responding to
