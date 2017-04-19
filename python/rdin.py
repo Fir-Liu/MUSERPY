@@ -40,7 +40,7 @@ def get_file_tr(filename,array='m1'):
     Usage:
         Read a raw muser data file, return the time range of the file.
     Returns:
-        time_start, time_end
+        (time_start, time_end)
     """
     file_hd_addr = 0
     file_end_addr = FRAME_NUM_FILE - 1
@@ -107,7 +107,7 @@ def sel_file(pathname,trange,array='m1'):
     Usage:
         determine which data-file should be processed in trange(time-range)
     Returns:
-        filelist to be processed by rdraw() or others.
+        [fileA, fileB,...]
     """       
     tf = get_db_tr(pathname,array)
     tf1 = [[vt[0],Time(vt[1]).jd] for vt in tf]
@@ -116,52 +116,70 @@ def sel_file(pathname,trange,array='m1'):
     trange = Time(trange).jd
     trscope = np.array([v[1] for v in tfranges])
     filescope = [v[0] for v in tfranges]
-    find1,find2 = -1,-1
-#    find2 = -1
-#    for ik,s in enumerate(trscope):
-#        if trange[0]>=s[0] and trange[0]<=s[1]:
-#            fileind.append(ik)
-#            for im,v in enumerate(trscope[ik:]):
-#                if trange[1]>=v[0] and trange[1]<=v[1]:
-#                    fileind.append(im)
-#                    break
-#            break
+    find1,find2 = -1,-1 # find1 start_index, find2: end_index
     for ik,s in enumerate(trscope):
-#        print(ik,s)
         if trange[0]>=s[0] and trange[0]<=s[1]:
             find1 = ik
-#            print(ik,s)
-#            print(fileind)
             break
-        
-#        if ik == 1: break
     for im,s in enumerate(trscope):
-#        print(im,s)
         if trange[1]>=s[0] and trange[1]<=s[1]:
-#            print('enter condition')
-#            print(fileind)
             find2 = im
-#            print(fileind)            
             break
-#    print(fileind)
     if find1==-1 and find2==-1:
         print('time is out of datafile range, try to input again')
         return
     elif find1==-1:
-#        inds = find2
         return filescope[find2]
     elif find2==-1:
         return filescope[find1]
     else:
         inds = list(range(find1,find2+1))
         sel_files = [filescope[p] for p in inds]
-        return sel_files
-#    return fileind            
-#    return tfranges
-    
+        return sel_files   
 
-def sorthelper(s):
-    return s[1][0]
+def count_file_addr(filename,array='m1'):
+    filesize = os.path.getsize(filename)
+    framenum = filesize//FRAMESIZE_MUSER_I if array=='m1' \
+                else FRAMESIZE_MUSER_H
+    return framenum
+
+def get_files_addr(sel_files,trange,array='m1'):
+    """
+    Usage:
+        determine start_frame_offset and end_frame_offset of
+        given files and trange.
+    Returns:
+        [[fileA,(addrA1,addrA2)],[fileB,(addrB1,addrB2)]...]
+    """     
+    tobj = Time(trange)
+    gps_rd = mr.gps_rd_m1 if array=='m1' else mr.gps_rd_m2   
+    if isinstance(sel_files,list):
+        addrlist = len(sel_files)*['']
+        with open(sel_files[0],'rb') as fid1:
+            t1=Time(gps_rd(fid1,0))
+            dt1 = tobj[0]-t1
+#            print(dt1.sec,FRAME_TICK)
+            addrlist[0] =(int(np.ceil(dt1.sec/FRAME_TICK)),count_file_addr(sel_files[0],array)-1)
+#            print(addrlist[0])
+        with open(sel_files[-1],'rb') as fid2:
+            t2=Time(gps_rd(fid2,0))
+            dt2 = tobj[1]-t2
+            addrlist[-1] =(0,int(np.floor(dt2.sec/FRAME_TICK))-1)
+        for ik, fs in enumerate(sel_files):
+            if ik == 0 or ik == len(sel_files)-1:
+                continue
+            else:
+                addrlist[ik] = (0,count_file_addr(sel_files[ik],array)-1)                       
+        return addrlist
+    else:
+        with open(sel_files,'rb') as fid:
+            t0 = Time(gps_rd(fid,0))
+            dt1 = tobj[0]-t0
+            dt2 = tobj[1]-t0
+            fr1 = round(dt1.sec/FRAME_TICK)
+            fr2 = dt2.sec//FRAME_TICK-1
+        return fr1,fr2
+                      
     
 def rdraw(pathname,trange,ttick=0,array='m1', \
           nant=40,rfind=0,pol='LL'):
