@@ -75,14 +75,14 @@ M = 2*gdpts+1
 
 #%%
 # Set xcor dataset with numpy structured masked array
-dt = [('uk',float),('vk',float),('wk',float),('xk',float),('wgtk',float)]
+dt = [('u',float),('v',float),('w',float),('x',float),('wgt',float)]
 Np = len(ma.compressed(uvwbl['u']))
 psf = np.array(np.zeros(Np),  dtype=dt)
-psf['xk'] = np.ones(Np)
-psf['wgtk'] = np.ones(Np)
-psf['uk'] = ma.compressed(uvwbl['u'])
-psf['vk']= ma.compressed(uvwbl['v'])
-psf['wk']= ma.compressed(uvwbl['w'])
+psf['x'] = np.ones(Np)
+psf['wgt'] = np.ones(Np)
+psf['u'] = ma.compressed(uvwbl['u'])
+psf['v']= ma.compressed(uvwbl['v'])
+psf['w']= ma.compressed(uvwbl['w'])
 
 #%%
 # Improving weighting performance
@@ -96,10 +96,13 @@ kerv = ('g',rms) # gaussian function is kernel
 xcorg = img.mgrid(psf_wt,uvgspan,uvres,kerv,kervspan)    
 #%%    
 Nf = int(M)
-Nz = Imdim**2 - Nf**2
-Nzl,Nzr = Nz/2+1, Nz/2
-xcorg_ex = np.hstack((np.zeros(Nzl),xcorg['xg'],np.zeros(Nzr)))
-xcorg_mat = xcorg_ex.reshape(Imdim,Imdim)
+if Imdim > Nf:
+    Nz = (Imdim**2 - Nf**2)
+    Nzl,Nzr = Nz//2+1, Nz//2
+    xcorg_ex = np.hstack((np.zeros(Nzl),xcorg['xg'],np.zeros(Nzr)))
+    xcorg_mat = xcorg_ex.reshape(Imdim,Imdim)
+else:
+    xcorg_mat = xcorg.reshape(Nf,Nf)
 beam = np.fft.ifft2(np.fft.fftshift(xcorg_mat))
 
 beam = np.fft.fftshift(np.real(beam))
@@ -157,3 +160,12 @@ plt.colorbar()
 #uvwbl['u'] = [ubl for ubl in DUVW[0,:]]
 #uvwbl['v'] = [vbl for vbl in DUVW[1,:]]
 #uvwbl['w'] = [wbl for wbl in DUVW[2,:]]
+import rdin as ri
+import os
+pathname = 'D:\\MUSER_Rawdata\\20151101\\MUSER-1\\dat'
+def rdraw1(pathname):
+
+    filelist = [os.path.join(pathname,n) for n in os.listdir(pathname) if os.path.isfile(os.path.join(pathname,n))]
+#    ri.getftr()
+    datafilelist = [s for s in filelist if os.path.getsize(s)>100000] #if filesize >100MB it should be a datafile
+    return datafilelist

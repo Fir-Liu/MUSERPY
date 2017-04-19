@@ -77,9 +77,9 @@ def mflag(arrayname,uvwbl,uvdata,flaglist):
     Nant = 40 if arrayname == 'm1' else 60
     Nbl = Nant*(Nant-1)/2
 #    logger.debug('Nbl is %d',Nbl)
-    dout_mask = ma.masked_array(zip(uvwbl['u'],uvwbl['v'],uvwbl['w'],
+    dout_mask = ma.masked_array(list(zip(uvwbl['u'],uvwbl['v'],uvwbl['w'],
                             np.hstack((uvdata[0:Nbl],np.conj(uvdata[0:Nbl]))),
-                            np.ones(Nbl*2)),dtype=ri.dtk)
+                            np.ones(Nbl*2))),dtype=ri.dtk)
     flagarr = mi.flagind(Nant,flaglist)
     flagarr = np.hstack((flagarr,flagarr+Nbl)) # flag (-u,-v)
     for ifl in flagarr:
@@ -87,11 +87,11 @@ def mflag(arrayname,uvwbl,uvdata,flaglist):
 #    Np = ma.count(dout_mask.dtype.names[0])   
 #    logger.debug('Np is %d',Np)    
 #    logger.debug('dout shape is %d',dout.shape[0])
-    dout_flag = np.array(zip(ma.compressed(dout_mask['u']),
+    dout_flag = np.array(list(zip(ma.compressed(dout_mask['u']),
                         ma.compressed(dout_mask['v']),
                         ma.compressed(dout_mask['w']),
                         ma.compressed(dout_mask['x']),
-                        ma.compressed(dout_mask['wgt'])),dtype=ri.dtk)
+                        ma.compressed(dout_mask['wgt']))),dtype=ri.dtk)
     return dout_flag
      
 
@@ -101,7 +101,7 @@ def mpsf(uvwbl,uvgspan,uvres,
      """
         Return weighted point spread function                
      """
-     return 0
+     pass
    
 def mweight(uvdata,wtregion,weight='U',taper=None): 
     """
@@ -139,7 +139,7 @@ def mgrid(uvdata,uvgspan,uvres,kerv,kervspan):
         if ktype[0]=='g':
             rms = ktype[1]
             kf = lambda x,y : np.exp(-x**2/(2*rms**2)-y**2/(2*rms**2))    
-            return map(kf,xseq,yseq)    
+            return list(map(kf,xseq,yseq))    
         else:
             return 0
 #    uvdata = ma.compressed(uvdata) if ma.isMA(uvdata) else uvdata    

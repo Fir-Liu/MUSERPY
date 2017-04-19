@@ -9,6 +9,7 @@ import numpy as np
 import muser_rdraw as mr
 from astropy.time import Time
 import misc as mi
+import os
 #%%
 import logging
 import imp
@@ -26,23 +27,52 @@ logger.basicConfig = logging.basicConfig(
 dtk=[('u',float),('v',float),('w',float),('x',complex),('wgt',float)]
 dtg =[('ug',float),('vg',float),('xg',complex)] 
 dtuvw = [('u',float),('v',float),('w',float)]
+FRAME_NUM_FILE = 19200 # 19200 frames each file
+FRAME_TICK = 0.003125 # 3.125ms for each frame
+FRAMESIZE_MUSER_I = 100000
+FRAMESIZE_MUSER_H = 204800
+FILESIZE_MUSER_I = 1920000000 # filesize of a MUSER-I data file
+FILESIZE_MUSER_H = 3932160000 # filesezie of a MUSER-H data file
+HEADER = np.array(27*[85],dtype='u1')
 #import datetime as dt
-def getftr(filename,array='m1'):
+def get_file_tr(filename,array='m1'):
     """
+    Usage:
         Read a raw muser data file, return the time range of the file.
+    Returns:
+        time_start, time_end
     """
-    fr_head = 0
-    fr_end = 19199
-    fid = open(filename,'rb')    
-    t1 = mr.gps_rd_m1(fid,fr_head) if array=='m1' else \
-        mr.gps_rd_m2(fid,fr_head)
-    t2 = mr.gps_rd_m1(fid,fr_end)if array=='m1' else \
-        mr.gps_rd_m2(fid,fr_end)
-    fid.close()
-    return [t1,t2]
-
-
-def rdraw(filename,trange,tdec=0,array='m1', \
+    file_hd_addr = 0
+    file_end_addr = FRAME_NUM_FILE - 1
+    filesize = os.path.getsize(filename)
+    fileframe = filesize//FRAMESIZE_MUSER_I if array=='m1' \
+                else filesize//FRAMESIZE_MUSER_H
+    with open(filename,'rb') as fid:
+         if array == 'm1':
+             fr_end_addr = file_end_addr if filesize == FILESIZE_MUSER_I \
+                        else fileframe-1             
+             t1 = mr.gps_rd_m1(fid,file_hd_addr)
+             t2 = mr.gps_rd_m1(fid,fr_end_addr)       
+         else:
+             fr_end_addr = file_end_addr if filesize == FILESIZE_MUSER_H \
+                        else fileframe-1             
+             t1 = mr.gps_rd_m2(fid,file_hd_addr)
+             t2 = mr.gps_rd_m2(fid,fr_end_addr)       
+    return (t1,t2)                        
+  
+def get_db_tr(pathname,array='m1'):
+    files = [os.path.join(pathname,n) for n in os.listdir(pathname) if os.path.isfile(os.path.join(pathname,n))]
+    if array=='m1':
+        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_I] #if filesize >1 frame it should be a datafile            
+    else:
+        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_H] #if filesize >1 frame it should be a datafile            
+    tranges = Time([get_file_tr(df,array) for df in datafiles])
+    t_min = Time(np.min(tranges.jd),format='jd').isot
+    t_max = Time(np.max(tranges.jd),format='jd').isot
+    print('{}{}{}{}'.format('The database time range : ',t_min,' to: ',t_max))
+    
+        
+def rdraw(pathname,trange,ttick=0,array='m1', \
           nant=40,rfind=0,pol='LL'):
     """ 
     Usage:
@@ -56,7 +86,7 @@ def rdraw(filename,trange,tdec=0,array='m1', \
     Input: 
         filename: type=str, datafile's path.
         trange: type=str list,like ['2014-11-11 12:22:35', '2014-11-11 12:22:45']
-        tdec: type=float, time interval in seconds, tdec=0 means picking only 1
+        ttick: type=float, time interval in seconds, ttick=0 means picking only 1
                 time point data out,default = 0.
         array: type=str, array name in ['m1','m2'], default = 'm1'.
         nant:  type=int,number of antennas, default = 40.
@@ -65,7 +95,8 @@ def rdraw(filename,trange,tdec=0,array='m1', \
         pol: type=str,circular polarization in ['LL','RR'], default='L'.
     """              
     Nant,Nbl,Nfreq = nant,nant*(nant-1)/2,16
-    tfr = 0.003125
+#    FRAME_TICK = 0.003125
+    files = [os.path.join(pathname,n) for n in os.listdir(pathname) if os.path.isfile(os.path.join(pathname,n))]
     if(array == 'm2'):
         gps_rd = mr.gps_rd_m2
         rftag_rd = mr.rftag_rd_m2
@@ -73,22 +104,29 @@ def rdraw(filename,trange,tdec=0,array='m1', \
         xcor_rd = mr.xcor_rd_m2
         dly_rd = mr.dly_rd_m2
         print('Array is set to MUSER-II')
+        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_H] #if filesize >1 frame it should be a datafile    
     else:
         gps_rd = mr.gps_rd_m1
         rftag_rd = mr.rftag_rd_m1
         acor_rd = mr.acor_rd_m1
         xcor_rd = mr.xcor_rd_m1        
         dly_rd = mr.dly_rd_m1
-        print('Array is set to MUSER-I')    
+        print('Array is set to MUSER-I')
+        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_I] #if filesize >1 frame it should be a datafile            
+#   check time-range and select the right datafiles in time-range
+#    for df in datafiles:
+    tranges = [get_file_tr(df,array) for df in datafiles]
+    return tranges
+
     tr = Time(trange)
 #    logger.debug('tr is',tr)
     td = tr[1]-tr[0]
-    if tdec == 0:
+    if ttick == 0:
         Nts = 1
         fr_step = 0
     else:
-        Nts = int(round(td.sec/tdec))
-        fr_step = tdec/tfr
+        Nts = int(round(td.sec/ttick))
+        fr_step = ttick/FRAME_TICK
     
     dout = {'x':np.zeros((Nbl,Nfreq,Nts),dtype='complex'), \
             'p':np.zeros((Nant,Nfreq,Nts)), \
@@ -100,7 +138,7 @@ def rdraw(filename,trange,tdec=0,array='m1', \
     fid = open(filename,'rb')
     tini = Time(gps_rd(fid, 0))
     dt1 = tr[0]-tini
-    fr_off = round(dt1.sec/tfr)
+    fr_off = round(dt1.sec/FRAME_TICK)
     
     freq_list = np.zeros(9,dtype='u1')
     for ss in range(0,9):
@@ -126,12 +164,12 @@ def rdraw(filename,trange,tdec=0,array='m1', \
 
     logger.debug('Frame starts from: %d',fr_off)
     logger.debug('Frame steps: %d',fr_step)        
-    
+#    
     print('Time range is:', trange)
     print('Number of Antenna:', nant)
     print('Poloarization:', pol)
     print('Rf band:', mi.ord2fr(rfind,array))
-    print('{}{:3d}{:>10}'.format('Time bin interval:',tdec,'seconds'))
+    print('{}{:3d}{:>10}'.format('Time bin interval:',ttick,'seconds'))
     print('Time bins:', Nts)
     print('Waiting....................')
     for nn in range(Nts):
