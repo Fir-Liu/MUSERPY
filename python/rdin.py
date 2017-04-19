@@ -224,8 +224,15 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
 #        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_I] #if filesize >1 frame it should be a datafile            
 #   check time-range and select the right datafiles in time-range
 #    for df in datafiles:
-    tfranges = get_db_tr(pathname,array)
-
+    dfiles = sel_file(pathname,trange,array)
+    addr_dfiles = get_files_addr(dfiles,trange)
+    fr_step = int(ttick/FRAME_TICK)
+#    Nts = len(dfiles)*[''] if isinstance(dfiles,list) else 1
+    if isinstance(dfiles,list):
+        Nts = len(dfiles)*[0]
+    else:
+        Nts = 0
+    
     tr = Time(trange)
 #    logger.debug('tr is',tr)
     td = tr[1]-tr[0]
