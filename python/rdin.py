@@ -61,17 +61,108 @@ def get_file_tr(filename,array='m1'):
     return (t1,t2)                        
   
 def get_db_tr(pathname,array='m1'):
+    """
+    Usage:
+        get time-range of each datafile in database.
+    Returns:
+        [[fileA, (tA1, tA2)], [fileB, (tB1, tB2)]...]
+    """    
     files = [os.path.join(pathname,n) for n in os.listdir(pathname) if os.path.isfile(os.path.join(pathname,n))]
     if array=='m1':
         datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_I] #if filesize >1 frame it should be a datafile            
     else:
         datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_H] #if filesize >1 frame it should be a datafile            
-    tranges = Time([get_file_tr(df,array) for df in datafiles])
+#    tranges = Time([get_file_tr(df,array) for df in datafiles])
+    tfranges = [[df,get_file_tr(df,array)] for df in datafiles]
+    return tfranges    
+
+def dis_db_tr(pathname,array='m1'):
+    """
+    Usage:
+        display the database's time-range.
+    Returns:
+        None
+    """    
+    tfranges = get_db_tr(pathname,array)
+    tranges = Time([v[1] for v in tfranges])
     t_min = Time(np.min(tranges.jd),format='jd').isot
     t_max = Time(np.max(tranges.jd),format='jd').isot
     print('{}{}{}{}'.format('The database time range : ',t_min,' to: ',t_max))
-    
+
+def set_tr2db(pathname,array='m1'):    
+    """
+    Usage:
+        set the default time-range as same as database time-range.
+    Returns:
+        time_start, time_end
+    """    
+    tfranges = get_db_tr(pathname,array)
+    tranges = Time([v[1] for v in tfranges])
+    t_min = Time(np.min(tranges.jd),format='jd').isot
+    t_max = Time(np.max(tranges.jd),format='jd').isot    
+    return [t_min, t_max]
+
+def sel_file(pathname,trange,array='m1'):
+    """
+    Usage:
+        determine which data-file should be processed in trange(time-range)
+    Returns:
+        filelist to be processed by rdraw() or others.
+    """       
+    tf = get_db_tr(pathname,array)
+    tf1 = [[vt[0],Time(vt[1]).jd] for vt in tf]
+    sortkf = lambda s: s[1][0]
+    tfranges = sorted(tf1,key=sortkf)
+    trange = Time(trange).jd
+    trscope = np.array([v[1] for v in tfranges])
+    filescope = [v[0] for v in tfranges]
+    find1,find2 = -1,-1
+#    find2 = -1
+#    for ik,s in enumerate(trscope):
+#        if trange[0]>=s[0] and trange[0]<=s[1]:
+#            fileind.append(ik)
+#            for im,v in enumerate(trscope[ik:]):
+#                if trange[1]>=v[0] and trange[1]<=v[1]:
+#                    fileind.append(im)
+#                    break
+#            break
+    for ik,s in enumerate(trscope):
+#        print(ik,s)
+        if trange[0]>=s[0] and trange[0]<=s[1]:
+            find1 = ik
+#            print(ik,s)
+#            print(fileind)
+            break
         
+#        if ik == 1: break
+    for im,s in enumerate(trscope):
+#        print(im,s)
+        if trange[1]>=s[0] and trange[1]<=s[1]:
+#            print('enter condition')
+#            print(fileind)
+            find2 = im
+#            print(fileind)            
+            break
+#    print(fileind)
+    if find1==-1 and find2==-1:
+        print('time is out of datafile range, try to input again')
+        return
+    elif find1==-1:
+#        inds = find2
+        return filescope[find2]
+    elif find2==-1:
+        return filescope[find1]
+    else:
+        inds = list(range(find1,find2+1))
+        sel_files = [filescope[p] for p in inds]
+        return sel_files
+#    return fileind            
+#    return tfranges
+    
+
+def sorthelper(s):
+    return s[1][0]
+    
 def rdraw(pathname,trange,ttick=0,array='m1', \
           nant=40,rfind=0,pol='LL'):
     """ 
@@ -104,7 +195,7 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
         xcor_rd = mr.xcor_rd_m2
         dly_rd = mr.dly_rd_m2
         print('Array is set to MUSER-II')
-        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_H] #if filesize >1 frame it should be a datafile    
+#        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_H] #if filesize >1 frame it should be a datafile    
     else:
         gps_rd = mr.gps_rd_m1
         rftag_rd = mr.rftag_rd_m1
@@ -112,11 +203,10 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
         xcor_rd = mr.xcor_rd_m1        
         dly_rd = mr.dly_rd_m1
         print('Array is set to MUSER-I')
-        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_I] #if filesize >1 frame it should be a datafile            
+#        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_I] #if filesize >1 frame it should be a datafile            
 #   check time-range and select the right datafiles in time-range
 #    for df in datafiles:
-    tranges = [get_file_tr(df,array) for df in datafiles]
-    return tranges
+    tfranges = get_db_tr(pathname,array)
 
     tr = Time(trange)
 #    logger.debug('tr is',tr)
