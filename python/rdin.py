@@ -205,7 +205,7 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
     """              
     Nant,Nbl,Nfreq = nant,nant*(nant-1)/2,16
 #    FRAME_TICK = 0.003125
-    files = [os.path.join(pathname,n) for n in os.listdir(pathname) if os.path.isfile(os.path.join(pathname,n))]
+#    files = [os.path.join(pathname,n) for n in os.listdir(pathname) if os.path.isfile(os.path.join(pathname,n))]
     if(array == 'm2'):
         gps_rd = mr.gps_rd_m2
         rftag_rd = mr.rftag_rd_m2
@@ -224,58 +224,69 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
 #        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_I] #if filesize >1 frame it should be a datafile            
 #   check time-range and select the right datafiles in time-range
 #    for df in datafiles:
+    bl2ord = mi.bl_tab(Nant)
     dfiles = sel_file(pathname,trange,array)
     addr_dfiles = get_files_addr(dfiles,trange)
     fr_step = int(ttick/FRAME_TICK)
 #    Nts = len(dfiles)*[''] if isinstance(dfiles,list) else 1
     if isinstance(dfiles,list):
-        Nts = len(dfiles)*[0]
+        Ntsl = len(dfiles)*[0]
+        for ik,a in enumerate(addr_dfiles):
+            Ntsl[ik] =  1 if (a[1]-a[0])//fr_step == 0 \
+                        else (a[1]-a[0])//fr_step
     else:
-        Nts = 0
-    
-    tr = Time(trange)
-#    logger.debug('tr is',tr)
-    td = tr[1]-tr[0]
-    if ttick == 0:
-        Nts = 1
-        fr_step = 0
-    else:
-        Nts = int(round(td.sec/ttick))
-        fr_step = ttick/FRAME_TICK
-    
+        Nts = [1] if (addr_dfiles[1]-addr_dfiles[0])//fr_step == 0 \
+                    else [(addr_dfiles[1]-addr_dfiles[0])//fr_step]
+    Nts = sum(Ntsl)
+    print( Nts,Ntsl )
+    print(dfiles)
     dout = {'x':np.zeros((Nbl,Nfreq,Nts),dtype='complex'), \
             'p':np.zeros((Nant,Nfreq,Nts)), \
             'GHz': np.zeros(Nts,dtype='S11'), \
             'time':np.zeros(Nts), \
+            'GPS':np.zeros(Nts,dtype='S26'), \
             'dly': np.zeros((Nant,Nts))}
-             
+    
+    for i,fn in enumerate(dfiles):
+        with open(fn,'rb') as fid:
+           for j in range(Ntsl[i]):
+#               print(i,j)
+               dout['GHz'][j + i*Ntsl[i-1]] = rftag_rd(fid, addr_dfiles[i][0] + j*fr_step)
+               dout['GPS'][j + i*Ntsl[i-1]] = gps_rd(fid, addr_dfiles[i][0] + j*fr_step)
+               for aa in range(Nant):
+                   dout['p'][aa,:,j + i*Ntsl[i-1]] = acor_rd(fid, addr_dfiles[i][0] + j*fr_step,aa)
+                   for kk in range(Nfreq):
+                       dout['x'][bl2ord[aa,aa+1:],kk,j + i*Ntsl[i-1]]=xcor_rd(fid, addr_dfiles[i][0] + j*fr_step,kk, aa,list(range(aa+1,Nant)))
+    print('Reading data is done.')  
+    return dout
+     
     bl2ord = mi.bl_tab(Nant)
-    fid = open(filename,'rb')
-    tini = Time(gps_rd(fid, 0))
-    dt1 = tr[0]-tini
-    fr_off = round(dt1.sec/FRAME_TICK)
-    
-    freq_list = np.zeros(9,dtype='u1')
-    for ss in range(0,9):
-        freq_list[ss] = mi.fr2ord(rftag_rd(fid, fr_off+ss))
-    
-    rfind1 = np.array([rfind,rfind],dtype='u1')
-    pos = -1
-    for k in range(0,len(freq_list)-1): 
-        if (np.equal(rfind1,freq_list[k:k+2]).all()):
-            pos = k
-            break
-        else:
-            continue
-    #tst = Time(mr.gps_rd_m1(fid, fr_off))
-    if pos == -1:
-        print('the observing mode should be no jumping, rfind \
-                is neglected')    
-    else:        
-        if pol == 'LL':
-            fr_off = fr_off+pos
-        else:
-            fr_off = fr_off+pos+1
+#    fid = open(filename,'rb')
+#    tini = Time(gps_rd(fid, 0))
+#    dt1 = tr[0]-tini
+#    fr_off = round(dt1.sec/FRAME_TICK)
+#    
+#    freq_list = np.zeros(9,dtype='u1')
+#    for ss in range(0,9):
+#        freq_list[ss] = mi.fr2ord(rftag_rd(fid, fr_off+ss))
+#    
+#    rfind1 = np.array([rfind,rfind],dtype='u1')
+#    pos = -1
+#    for k in range(0,len(freq_list)-1): 
+#        if (np.equal(rfind1,freq_list[k:k+2]).all()):
+#            pos = k
+#            break
+#        else:
+#            continue
+#    #tst = Time(mr.gps_rd_m1(fid, fr_off))
+#    if pos == -1:
+#        print('the observing mode should be no jumping, rfind \
+#                is neglected')    
+#    else:        
+#        if pol == 'LL':
+#            fr_off = fr_off+pos
+#        else:
+#            fr_off = fr_off+pos+1
 
     logger.debug('Frame starts from: %d',fr_off)
     logger.debug('Frame steps: %d',fr_step)        
