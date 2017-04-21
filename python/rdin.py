@@ -35,6 +35,7 @@ FILESIZE_MUSER_I = 1920000000 # filesize of a MUSER-I data file
 FILESIZE_MUSER_H = 3932160000 # filesezie of a MUSER-H data file
 HEADER = np.array(27*[85],dtype='u1')
 #import datetime as dt
+
 def get_file_tr(filename,array='m1'):
     """
     Usage:
@@ -63,7 +64,7 @@ def get_file_tr(filename,array='m1'):
 def get_db_tr(pathname,array='m1'):
     """
     Usage:
-        get time-range of each datafile in database.
+        get time-range of each datafile in database in ascending order
     Returns:
         [[fileA, (tA1, tA2)], [fileB, (tB1, tB2)]...]
     """    
@@ -73,7 +74,9 @@ def get_db_tr(pathname,array='m1'):
     else:
         datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_H] #if filesize >1 frame it should be a datafile            
 #    tranges = Time([get_file_tr(df,array) for df in datafiles])
-    tfranges = [[df,get_file_tr(df,array)] for df in datafiles]
+    tf = [[df,get_file_tr(df,array)] for df in datafiles]
+    sortkf = lambda s: s[1][0]
+    tfranges = sorted(tf,key=sortkf)
     return tfranges    
 
 def dis_db_tr(pathname,array='m1'):
@@ -83,11 +86,8 @@ def dis_db_tr(pathname,array='m1'):
     Returns:
         None
     """    
-    tfranges = get_db_tr(pathname,array)
-    tranges = Time([v[1] for v in tfranges])
-    t_min = Time(np.min(tranges.jd),format='jd').isot
-    t_max = Time(np.max(tranges.jd),format='jd').isot
-    print('{}{}{}{}'.format('The database time range : ',t_min,' to: ',t_max))
+    t_min,t_max = set_tr2db(pathname,array)
+    print('{}{}{}{}'.format('The database time range : \n',t_min,' to: ',t_max))
 
 def set_tr2db(pathname,array='m1'):    
     """
@@ -97,10 +97,35 @@ def set_tr2db(pathname,array='m1'):
         time_start, time_end
     """    
     tfranges = get_db_tr(pathname,array)
-    tranges = Time([v[1] for v in tfranges])
-    t_min = Time(np.min(tranges.jd),format='jd').isot
-    t_max = Time(np.max(tranges.jd),format='jd').isot    
+#    sortkf = lambda s: Time(s[1][0]).jd
+#    tfranges = sorted(tf,key=sortkf)
+    t_min,t_max = tfranges[0][1][0], tfranges[-1][1][1]
     return [t_min, t_max]
+
+def set_trange(trange,pathname,array='m1'):
+    """
+    Usage:
+        set the new time range based on the time-range of database files.
+    Returns:
+        time_start, time_end
+    """     
+    dbtf = get_db_tr(pathname,array)
+    dbtfjd = [[vt[0],Time(vt[1]).jd] for vt in dbtf]
+    trscope = np.array([v[1] for v in dbtfjd])   
+    tr = Time(trange).jd
+    for ik, s in enumerate(trscope):
+        if ik == 0:
+            tr[0] = s[0] if tr[0]<s[0] else tr[0] 
+        else:
+            if tr[0]>trscope[ik-1][1] and tr[0]<s[0]:
+                tr[0] = s[0]
+    for ik, s in enumerate(trscope):
+        if ik == len(trscope)-1:
+            tr[1] = s[1] if tr[1]>s[1] else tr[1] 
+        else:
+            if tr[1]<trscope[ik+1][0] and tr[0]>s[1]:
+                tr[1] = s[1]                
+    return tr
 
 def sel_file(pathname,trange,array='m1'):
     """
@@ -109,13 +134,14 @@ def sel_file(pathname,trange,array='m1'):
     Returns:
         [fileA, fileB,...]
     """       
-    tf = get_db_tr(pathname,array)
-    tf1 = [[vt[0],Time(vt[1]).jd] for vt in tf]
-    sortkf = lambda s: s[1][0]
-    tfranges = sorted(tf1,key=sortkf)
-    trange = Time(trange).jd
-    trscope = np.array([v[1] for v in tfranges])
-    filescope = [v[0] for v in tfranges]
+    trange = set_trange(trange,pathname,array) # respecify the input trange
+    dbtf = get_db_tr(pathname,array)
+    dbtfjd = [[vt[0],Time(vt[1]).jd] for vt in dbtf]
+#    sortkf = lambda s: s[1][0]
+#    tfranges = sorted(tf1,key=sortkf)
+
+    trscope = np.array([v[1] for v in dbtfjd])
+    filescope = [v[0] for v in dbtfjd]
     find1,find2 = -1,-1 # find1 start_index, find2: end_index
     for ik,s in enumerate(trscope):
         if trange[0]>=s[0] and trange[0]<=s[1]:
@@ -203,32 +229,19 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
                 for m1 rfind is in range(0,4); for m2 rfind is in range(0,33).
         pol: type=str,circular polarization in ['LL','RR'], default='L'.
     """              
-    Nant,Nbl,Nfreq = nant,nant*(nant-1)/2,16
-#    FRAME_TICK = 0.003125
-#    files = [os.path.join(pathname,n) for n in os.listdir(pathname) if os.path.isfile(os.path.join(pathname,n))]
-    if(array == 'm2'):
-        gps_rd = mr.gps_rd_m2
-        rftag_rd = mr.rftag_rd_m2
-        acor_rd = mr.acor_rd_m2
-        xcor_rd = mr.xcor_rd_m2
-        dly_rd = mr.dly_rd_m2
-        print('Array is set to MUSER-II')
-#        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_H] #if filesize >1 frame it should be a datafile    
-    else:
-        gps_rd = mr.gps_rd_m1
-        rftag_rd = mr.rftag_rd_m1
-        acor_rd = mr.acor_rd_m1
-        xcor_rd = mr.xcor_rd_m1        
-        dly_rd = mr.dly_rd_m1
-        print('Array is set to MUSER-I')
-#        datafiles = [s for s in files if os.path.getsize(s)>FRAMESIZE_MUSER_I] #if filesize >1 frame it should be a datafile            
+    Nant,Nbl,Nfreq = nant,int(nant*(nant-1)/2),16
+    gps_rd = mr.gps_rd_m1 if array == 'm1' else mr.gps_rd_m2
+    rftag_rd = mr.rftag_rd_m1 if array == 'm1' else mr.rftag_rd_m2
+    acor_rd = mr.acor_rd_m1 if array == 'm1' else mr.acor_rd_m2
+    xcor_rd = mr.xcor_rd_m1 if array == 'm1' else mr.xcor_rd_m2       
+    dly_rd = mr.dly_rd_m1 if array == 'm1' else mr.dly_rd_m2
+    arrayname = 'MUSER-I' if array =='m1' else 'MUSER-H'
+    print('Array is set to '+arrayname)
 #   check time-range and select the right datafiles in time-range
-#    for df in datafiles:
     bl2ord = mi.bl_tab(Nant)
     dfiles = sel_file(pathname,trange,array)
     addr_dfiles = get_files_addr(dfiles,trange)
     fr_step = int(ttick/FRAME_TICK)
-#    Nts = len(dfiles)*[''] if isinstance(dfiles,list) else 1
     if isinstance(dfiles,list):
         Ntsl = len(dfiles)*[0]
         for ik,a in enumerate(addr_dfiles):
@@ -238,14 +251,22 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
         Nts = [1] if (addr_dfiles[1]-addr_dfiles[0])//fr_step == 0 \
                     else [(addr_dfiles[1]-addr_dfiles[0])//fr_step]
     Nts = sum(Ntsl)
-    print( Nts,Ntsl )
-    print(dfiles)
+#    print( Nts,Ntsl )
+#    print(dfiles)
     dout = {'x':np.zeros((Nbl,Nfreq,Nts),dtype='complex'), \
             'p':np.zeros((Nant,Nfreq,Nts)), \
             'GHz': np.zeros(Nts,dtype='S11'), \
             'time':np.zeros(Nts), \
             'GPS':np.zeros(Nts,dtype='S26'), \
             'dly': np.zeros((Nant,Nts))}
+
+    print('Time range is:', trange)
+    print('Number of Antenna:', nant)
+    print('Poloarization:', pol)
+    print('Rf band:', mi.ord2fr(rfind,array))
+    print('{}{:3d}{:>10}'.format('Time bin interval:',ttick,'seconds'))
+    print('Time bins:', Nts)
+    print('Waiting....................')
     
     for i,fn in enumerate(dfiles):
         with open(fn,'rb') as fid:
@@ -260,7 +281,7 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
     print('Reading data is done.')  
     return dout
      
-    bl2ord = mi.bl_tab(Nant)
+#    bl2ord = mi.bl_tab(Nant)
 #    fid = open(filename,'rb')
 #    tini = Time(gps_rd(fid, 0))
 #    dt1 = tr[0]-tini
@@ -288,42 +309,42 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
 #        else:
 #            fr_off = fr_off+pos+1
 
-    logger.debug('Frame starts from: %d',fr_off)
-    logger.debug('Frame steps: %d',fr_step)        
+#    logger.debug('Frame starts from: %d',fr_off)
+#    logger.debug('Frame steps: %d',fr_step)        
+##    
+#    print('Time range is:', trange)
+#    print('Number of Antenna:', nant)
+#    print('Poloarization:', pol)
+#    print('Rf band:', mi.ord2fr(rfind,array))
+#    print('{}{:3d}{:>10}'.format('Time bin interval:',ttick,'seconds'))
+#    print('Time bins:', Nts)
+#    print('Waiting....................')
+#    for nn in range(Nts):
+##        dout['time'][nn] = Time(mr.gps_rd_m1(fid, fr_off+nn*fr_step)).jd \
+##                            if (array=='m1') else Time(mr.gps_rd_m2(fid, fr_off+nn*fr_step)).jd
+##        dout['GHz'][nn] = mr.rftag_rd_m1(fid,fr_off+nn*fr_step) \
+##                            if (array=='m1') else mr.rftag_rd_m2(fid,fr_off+nn*fr_step)
+#        dout['time'][nn] = Time(gps_rd(fid, fr_off+nn*fr_step)).jd 
+#        dout['GHz'][nn] = rftag_rd(fid,fr_off+nn*fr_step)
+#        dout['dly'][:,nn] = dly_rd(fid, fr_off+nn*fr_step)
+#        for aa in range(Nant):
+##            dout['p'][aa,:,nn] = mr.acor_rd_m1(fid, fr_off+nn*fr_step,aa) \
+##                                if(array=='m1') else mr.acor_rd_m2(fid, fr_off+nn*fr_step,aa)
+#            dout['p'][aa,:,nn] = acor_rd(fid, fr_off+nn*fr_step,aa)
+#            
+#            for kk in range(Nfreq):
+##                dout['x'][bl2ord[aa,aa+1:],kk,nn]=mr.xcor_rd_m1(fid, fr_off+nn*fr_step, kk, aa,range(aa+1,Nant)) \
+##                                                if(array=='m1') else mr.xcor_rd_m2(fid, fr_off+nn*fr_step, kk, aa,range(aa+1,Nant))
+##                print('nn=',nn)
+##                print('aa=',aa)
+##                print('kk=',kk)
+##                print('fr_off=',fr_off)
+##                print('fr_step=',fr_step)
+#                dout['x'][bl2ord[aa,aa+1:],kk,nn]=xcor_rd(fid, fr_off+nn*fr_step, kk, aa,list(range(aa+1,Nant))) 
 #    
-    print('Time range is:', trange)
-    print('Number of Antenna:', nant)
-    print('Poloarization:', pol)
-    print('Rf band:', mi.ord2fr(rfind,array))
-    print('{}{:3d}{:>10}'.format('Time bin interval:',ttick,'seconds'))
-    print('Time bins:', Nts)
-    print('Waiting....................')
-    for nn in range(Nts):
-#        dout['time'][nn] = Time(mr.gps_rd_m1(fid, fr_off+nn*fr_step)).jd \
-#                            if (array=='m1') else Time(mr.gps_rd_m2(fid, fr_off+nn*fr_step)).jd
-#        dout['GHz'][nn] = mr.rftag_rd_m1(fid,fr_off+nn*fr_step) \
-#                            if (array=='m1') else mr.rftag_rd_m2(fid,fr_off+nn*fr_step)
-        dout['time'][nn] = Time(gps_rd(fid, fr_off+nn*fr_step)).jd 
-        dout['GHz'][nn] = rftag_rd(fid,fr_off+nn*fr_step)
-        dout['dly'][:,nn] = dly_rd(fid, fr_off+nn*fr_step)
-        for aa in range(Nant):
-#            dout['p'][aa,:,nn] = mr.acor_rd_m1(fid, fr_off+nn*fr_step,aa) \
-#                                if(array=='m1') else mr.acor_rd_m2(fid, fr_off+nn*fr_step,aa)
-            dout['p'][aa,:,nn] = acor_rd(fid, fr_off+nn*fr_step,aa)
-            
-            for kk in range(Nfreq):
-#                dout['x'][bl2ord[aa,aa+1:],kk,nn]=mr.xcor_rd_m1(fid, fr_off+nn*fr_step, kk, aa,range(aa+1,Nant)) \
-#                                                if(array=='m1') else mr.xcor_rd_m2(fid, fr_off+nn*fr_step, kk, aa,range(aa+1,Nant))
-#                print('nn=',nn)
-#                print('aa=',aa)
-#                print('kk=',kk)
-#                print('fr_off=',fr_off)
-#                print('fr_step=',fr_step)
-                dout['x'][bl2ord[aa,aa+1:],kk,nn]=xcor_rd(fid, fr_off+nn*fr_step, kk, aa,list(range(aa+1,Nant))) 
-    
-    fid.close()
-    print('Reading data is done.')             
-    return dout
+#    fid.close()
+#    print('Reading data is done.')             
+#    return dout
 
 #%% Test
 
