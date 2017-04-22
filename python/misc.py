@@ -94,3 +94,9 @@ def ord2fr(rfind,array='m1'):
     '''
     rffreq = infrdict1[rfind] if array=='m1' else infrdict2[rfind]
     return rffreq    
+
+def qround(num,step):
+    a = step/2
+    k = int(num/step)
+    s = (k+1)*step if num-k*step >=a else k*step
+    return s

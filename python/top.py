@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy.ma as ma
 import img
 import rdin as ri
-
+#%%
 #
 arraycfgfile = r'..\config\LFA_Ant_pos.txt'
 obs_freq = 1.7025e+9 

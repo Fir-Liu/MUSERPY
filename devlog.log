@@ -1,0 +1,4 @@
+2017/04/22
+1,ri.get_files_addr() should be checked with start_address and end_address.
+  dt = (time_end - time_start)+time_step?
+  nts = round(dt/time_step,time_step/2) 

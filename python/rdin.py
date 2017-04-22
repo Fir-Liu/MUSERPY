@@ -185,12 +185,13 @@ def get_files_addr(sel_files,trange,array='m1'):
             t1=Time(gps_rd(fid1,0))
             dt1 = tobj[0]-t1
 #            print(dt1.sec,FRAME_TICK)
-            addrlist[0] =(int(np.ceil(dt1.sec/FRAME_TICK)),count_file_addr(sel_files[0],array)-1)
+            addrlist[0] =(int(mi.qround(dt1.sec,FRAME_TICK)/FRAME_TICK), \
+                    count_file_addr(sel_files[0],array)-1)
 #            print(addrlist[0])
         with open(sel_files[-1],'rb') as fid2:
             t2=Time(gps_rd(fid2,0))
             dt2 = tobj[1]-t2
-            addrlist[-1] =(0,int(np.floor(dt2.sec/FRAME_TICK))-1)
+            addrlist[-1] =(0,int(mi.qround(dt2.sec,FRAME_TICK)/FRAME_TICK))
         for ik, fs in enumerate(sel_files):
             if ik == 0 or ik == len(sel_files)-1:
                 continue
@@ -241,18 +242,18 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
     bl2ord = mi.bl_tab(Nant)
     dfiles = sel_file(pathname,trange,array)
     addr_dfiles = get_files_addr(dfiles,trange)
-    fr_step = int(ttick/FRAME_TICK)
+    fr_step = int(ttick/FRAME_TICK) 
     if isinstance(dfiles,list):
         Ntsl = len(dfiles)*[0]
         for ik,a in enumerate(addr_dfiles):
-            Ntsl[ik] =  1 if (a[1]-a[0])//fr_step == 0 \
-                        else (a[1]-a[0])//fr_step
+            Ntsl[ik] =  1 if (a[1]-a[0]+1)//fr_step == 0 \
+                        else (a[1]-a[0]+1)//fr_step
     else:
-        Nts = [1] if (addr_dfiles[1]-addr_dfiles[0])//fr_step == 0 \
-                    else [(addr_dfiles[1]-addr_dfiles[0])//fr_step]
+        Nts = [1] if (addr_dfiles[1]-addr_dfiles[0]+1)//fr_step == 0 \
+                    else [(addr_dfiles[1]-addr_dfiles[0]+1)//fr_step]
     Nts = sum(Ntsl)
-#    print( Nts,Ntsl )
-#    print(dfiles)
+    print( fr_step,Nts,Ntsl )
+    print(addr_dfiles); return
     dout = {'x':np.zeros((Nbl,Nfreq,Nts),dtype='complex'), \
             'p':np.zeros((Nant,Nfreq,Nts)), \
             'GHz': np.zeros(Nts,dtype='S11'), \
