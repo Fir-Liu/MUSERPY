@@ -163,6 +163,7 @@ plt.colorbar()
 import rdin as ri
 import os
 pathname = 'D:\\MUSER_Rawdata\\20151101\\MUSER-1\\dat'
+pathname = r'C:\MUSER_DATA\data'
 def rdraw1(pathname):
 
     filelist = [os.path.join(pathname,n) for n in os.listdir(pathname) if os.path.isfile(os.path.join(pathname,n))]

@@ -137,8 +137,6 @@ def sel_file(pathname,trange,array='m1'):
     trange = set_trange(trange,pathname,array) # respecify the input trange
     dbtf = get_db_tr(pathname,array)
     dbtfjd = [[vt[0],Time(vt[1]).jd] for vt in dbtf]
-#    sortkf = lambda s: s[1][0]
-#    tfranges = sorted(tf1,key=sortkf)
 
     trscope = np.array([v[1] for v in dbtfjd])
     filescope = [v[0] for v in dbtfjd]

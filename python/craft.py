@@ -136,4 +136,15 @@ def qround(num,step):
     k = int(num/step)
     s = (k+1)*step if num-k*step >=a else k*step
     return s
-    
+
+#%%
+from datetime import datetime
+def log(message,when=None):
+    when = datetime.now() if when==None else when
+    print('%s %s' % (when, message))
+#%%
+from decimal import Decimal
+rate = Decimal('1.45')
+seconds = Decimal('222') # 3*60 + 42
+cost = rate * seconds / Decimal('60')
+print(cost)
