@@ -35,7 +35,7 @@ def xcor_rd_m1( fid, frame_offset, chan, antref, ant_list ):
         xcor_addr = frame_offset*100000 + 2944 + (zone_ind - 1)*zone_size \
                     +(block_ind - 1)*block_size + (slot_ind - 1)*slot_size    
                             
-        xcor_addr = xcor_addr.astype(int)         
+        xcor_addr = xcor_addr.astype('int64')         
 #        print('xcor_addr=',xcor_addr)
         
         fid.seek(0,0); fid.seek(xcor_addr[0],1)                                
@@ -82,7 +82,7 @@ def acor_rd_m1(fid, frame_offset, ant_ind):
         ant_auto_addr = frame_addr + auto_data_addr + (kk-1)*zone_size \
         +(tablist[ant_ind, 1] - 1)*block_size + (tablist[ant_ind, 2] - 1) \
         *slot_size
-        ant_auto_addr = ant_auto_addr.astype(int)
+        ant_auto_addr = ant_auto_addr.astype('int64')
         fid.seek(0,0)
         fid.seek(ant_auto_addr,1)
         P[2*kk-2]=np.fromfile(fid,dtype=dt,count=1)
@@ -190,21 +190,30 @@ def rftag_rd_m2(fid, frame_offset):
         fid: File handle of an opend Muser-I datafile.
         frame_offset: 0~19199, frame address in one datafile.
     '''
-    f_dict = {0:'0.4G-0.8G',1:'0.8G-1.2G',2:'1.2G-1.6G',3:'1.6G-2.0G',\
-            4:'0.4G-0.8G',5:'0.8G-1.2G',6:'1.2G-1.6G',7:'1.6G-2.0G',\
-            8:'0.4G-0.8G',9:'0.8G-1.2G',10:'1.2G-1.6G',11:'1.6G-2.0G', \
-            12:'0.4G-0.8G',13:'0.8G-1.2G',14:'1.2G-1.6G',15:'1.6G-2.0G', \
-            16:'0.4G-0.8G',17:'0.8G-1.2G',18:'1.2G-1.6G',19:'1.6G-2.0G', \
-            20:'0.4G-0.8G',21:'0.8G-1.2G',22:'1.2G-1.6G',23:'1.6G-2.0G', \
-            24:'0.4G-0.8G',25:'0.8G-1.2G',26:'1.2G-1.6G',27:'1.6G-2.0G', \
-            28:'0.4G-0.8G',29:'0.8G-1.2G',30:'1.2G-1.6G',31:'1.6G-2.0G', \
-            32:'0.4G-0.8G'}
+    f_dict = {0:'2.0G-2.4G',2:'2.4G-2.8G',4:'2.8G-3.2G',6:'3.2G-3.6G',\
+            8:'3.6G-4.0G',10:'4.0G-4.4G',12:'4.4G-4.8G',14:'4.8G-5.2G', \
+            16:'5.2G-5.6G',18:'5.6G-6.0G',20:'6.0G-6.4G',22:'6.4G-6.8G', \
+            24:'6.8G-7.2G',26:'7.2G-7.6G',28:'7.6G-8.0G',30:'8.0G-8.4G', \
+            32:'8.4G-8.8G',34:'8.8G-9.2G',36:'9.2G-9.6G',38:'9.6G-10.0G', \
+            40:'10.0G-10.4G',42:'10.4G-10.8G',44:'10.8G-11.2G',46:'11.2G-11.6G', \
+            48:'11.6G-12.0G',50:'12.0G-12.4G',52:'12.4G-12.8G',54:'12.8G-13.2G', \
+            56:'13.2G-13.6G',58:'13.6G-14.0G',60:'14.0G-14.4G',62:'14.4G-14.8G',64:'14.6G-15.0G',\
+            1:'2.0G-2.4G',3:'2.4G-2.8G',5:'2.8G-3.2G',7:'3.2G-3.6G',\
+            9:'3.6G-4.0G',11:'4.0G-4.4G',13:'4.4G-4.8G',15:'4.8G-5.2G', \
+            17:'5.2G-5.6G',19:'5.6G-6.0G',21:'6.0G-6.4G',23:'6.4G-6.8G', \
+            25:'6.8G-7.2G',27:'7.2G-7.6G',29:'7.6G-8.0G',31:'8.0G-8.4G', \
+            33:'8.4G-8.8G',35:'8.8G-9.2G',37:'9.2G-9.6G',39:'9.6G-10.0G', \
+            41:'10.0G-10.4G',43:'10.4G-10.8G',45:'10.8G-11.2G',47:'11.2G-11.6G', \
+            49:'11.6G-12.0G',51:'12.0G-12.4G',53:'12.4G-12.8G',55:'12.8G-13.2G', \
+            57:'13.2G-13.6G',59:'13.6G-14.0G',61:'14.0G-14.4G',63:'14.4G-14.8G',65:'14.6G-15.0G'}
     dt = np.dtype('u1') #uint8
-    rftag_addr = frame_offset*204800 + [208, 204664]
-    fid.seek(rftag_addr[0], 0)
+#    rftag_addr = frame_offset*204800 + np.array([208, 204664],dtype=int)
+    rftag_addr0 = frame_offset*204800 +208
+    rftag_addr1 = frame_offset*204800 +204664
+    fid.seek(rftag_addr0, 0)
     tagA = np.zeros(2)
     tagA[0] = np.fromfile(fid, dtype=dt,count=1)
-    fid.seek(rftag_addr[1],0)       
+    fid.seek(rftag_addr1,0)       
     tagA[1] = np.fromfile(fid, dtype=dt,count=1)
     fid.seek(0,0)
     return f_dict[tagA[1]]
@@ -237,7 +246,9 @@ def acor_rd_m2( fid, frame_offset, ant_ind ):
         ant_auto_addr = frame_addr + auto_data_addr + (kk-1)*zone_size + \
                         (tablist[ant_ind, 2] - 1)*block_size + \
                          (tablist[ant_ind, 3] - 1)*slot_size
-        ant_auto_addr = ant_auto_addr.astype(int)                        
+#        print(ant_auto_addr)                       
+        ant_auto_addr = ant_auto_addr.astype('int64') 
+#        print(ant_auto_addr)                       
         fid.seek(ant_auto_addr,0)                         
         if(Nz==1):
             P[kk-1] = np.fromfile(fid, count=1, dtype=dt)
@@ -274,45 +285,33 @@ def xcor_rd_m2( fid, frame_offset, chan, antref, ant_list ):
     xcor_Q_out = np.zeros(len(ant_list))
     
 #    ifelse=@(a,b,c)(a~=0)*b+(a==0)*c;
-    xtable = np.zeros((64,64))
-    xtable[0,:] = np.arange(64)
+    xtable = np.zeros((64,64),dtype='int64')
+    xtable[0,:] = np.arange(64,dtype='int64')
     for k in np.arange(63):
         xtable[k+1,:] = xtable[k,:] + 63-(k+1)
     
     for n in range(len(ant_list)):
-        block_ind = np.ceil(xtable[antref,ant_list[n]]/2.)
+        block_ind = np.int64(np.ceil(xtable[antref,ant_list[n]]/2.))
         
-        slot_ind = np.array([1,3,5]) if(np.mod(xtable[antref,ant_list[n]], 2)!=0) \
-                                        else np.array([2,4,6])
-#        slot_ind = ifelse(mod(xtable(antref,ant_list(n)), 2),[1 3 5],[2 4 6]);
+        slot_ind = np.array([1,3,5],dtype='int64') if(np.mod(xtable[antref,ant_list[n]], 2)!=0) \
+                                        else np.array([2,4,6],dtype='int64')
     
         xcor_addr = frame_offset*204800 + 1888 + chan*zone_size \
                     + (block_ind - 1)*block_size + (slot_ind - 1)*slot_size    
-        xcor_addr = xcor_addr.astype(int)                     
-        fid.seek(0,0); fid.seek(xcor_addr[0],1)
-        xcor_Q1 = np.fromfile(fid, count=1, dtype=dt) #[7:0]
-        xcor_I1 = np.fromfile(fid, count=1, dtype=dt) #[7:0]
-#        xcor_Q1 = fread(fid, 1, 'uint8') #[7:0]
-#        xcor_I1 = fread(fid, 1, 'uint8')
+
+        fid.seek(xcor_addr[0],0)
+        xcor_QI1 = np.fromfile(fid,count=2,dtype=dt)
         
-        fid.seek(0,0);  fid.seek(xcor_addr[1],1)
-        xcor_Q2 = np.fromfile(fid, count=1, dtype=dt) #[15:8]
-        xcor_I2 = np.fromfile(fid, count=1, dtype=dt) 
-#        xcor_Q2 = fread(fid, 1, 'uint8'); #[15:8]
-#        xcor_I2 = fread(fid, 1, 'uint8');
+        fid.seek(xcor_addr[1],0)
+        xcor_QI2 = np.fromfile(fid,count=2,dtype=dt)
         
-        fid.seek(0,0);  fid.seek(xcor_addr[2],1)
-        xcor_Q3 = np.fromfile(fid, count=1, dtype=dt) #[23:16]
-        xcor_I3 = np.fromfile(fid, count=1, dtype=dt) 
-#        xcor_Q3 = fread(fid, 1, 'uint8'); #[23:16]
-#        xcor_I3 = fread(fid, 1, 'uint8');  
+        fid.seek(xcor_addr[2],0)
+        xcor_QI3 = np.fromfile(fid,count=2,dtype=dt)
         
-        xcor_I_out[n] = xcor_I3*256**2 + xcor_I2*256 + xcor_I1
-        xcor_Q_out[n] = xcor_Q3*256**2 + xcor_Q2*256 + xcor_Q1
+        xcor_I_out[n] = xcor_QI3[1]*256**2 + xcor_QI2[1]*256 + xcor_QI1[1]
+        xcor_Q_out[n] = xcor_QI3[0]*256**2 + xcor_QI2[0]*256 + xcor_QI1[0]
         xcor_I_out[n] = xcor_I_out[n]-2**24 if(xcor_I_out[n]>=2**23) else xcor_I_out[n]        
         xcor_Q_out[n] = xcor_Q_out[n]-2**24 if(xcor_Q_out[n]>=2**23) else xcor_Q_out[n]                
-#        xcor_I_out[n] = ifelse(xcor_I_out(n)>2^23, xcor_I_out(n)-2^24, xcor_I_out(n));
-#        xcor_Q_out(n) = ifelse(xcor_Q_out(n)>2^23, xcor_Q_out(n)-2^24, xcor_Q_out(n));
     
     fid.seek(0,0)
     return list(map(np.complex, xcor_I_out,xcor_Q_out))
@@ -348,20 +347,67 @@ def dly_rd_m2(fid, frame_offset):
     return 0
     
 #%%
-#gps_str = '11010101001110101000101010101111'
-#gps_st = {'yr':0,'mon':0}
-#
-#str1 = [gps_str[0:12],gps_str[12:16],gps_str[16:21],gps_str[21:26],gps_str[26:32],\
-#        gps_str[32:38],gps_str[38:48],gps_str[48:58],gps_str[58:64]]
-#
-#gps_st['yr'], gps_st['mon'],gps_st['day'],gps_st['hr'],gps_st['min'], \
-#gps_st['sec'],gps_st['msec'],gps_st['usec'],gps_st['nsec']  \
-#= map(int,str1,[2,2,2,2,2,2,2,2,2])
-#gps_st['yr']=gps_st['yr']+2000
+#def xcor_rd_m2( fid, frame_offset, chan, antref, ant_list ):
+#    '''
+#    Output:
+#        Return the complex xcorrelation data of baseline: antref--ant_list[k]
+#    Input:
+#        fid: File handle of an opend Muser-I datafile.
+#        frame_offset: 0~19199, frame address in one datafile.
+#        chan: 0~15, channel number in 400 MHz
+#        antref: referenced antenna. 0~43
+#        antlist: [ant1, ant2, ant3...] 0~43
+#    '''
+#    zone_size = 12680;
+#    block_size = 12;
+#    slot_size = 2;
+#    dt = np.dtype('u1')
+#    xcor_I_out = np.zeros(len(ant_list))
+#    xcor_Q_out = np.zeros(len(ant_list))
+#    
+##    ifelse=@(a,b,c)(a~=0)*b+(a==0)*c;
+#    xtable = np.zeros((64,64))
+#    xtable[0,:] = np.arange(64)
+#    for k in np.arange(63):
+#        xtable[k+1,:] = xtable[k,:] + 63-(k+1)
+#    
+#    for n in range(len(ant_list)):
+#        block_ind = np.ceil(xtable[antref,ant_list[n]]/2.)
+#        
+#        slot_ind = np.array([1,3,5]) if(np.mod(xtable[antref,ant_list[n]], 2)!=0) \
+#                                        else np.array([2,4,6])
+##        slot_ind = ifelse(mod(xtable(antref,ant_list(n)), 2),[1 3 5],[2 4 6]);
+#    
+#        xcor_addr = frame_offset*204800 + 1888 + chan*zone_size \
+#                    + (block_ind - 1)*block_size + (slot_ind - 1)*slot_size    
+##        print(xcor_addr)
+#        xcor_addr = xcor_addr.astype('int64')     
+##        print(xcor_addr)                
+#        fid.seek(0,0); fid.seek(xcor_addr[0],1)
+#        xcor_Q1 = np.fromfile(fid, count=1, dtype=dt) #[7:0]
+#        xcor_I1 = np.fromfile(fid, count=1, dtype=dt) #[7:0]
+##        xcor_Q1 = fread(fid, 1, 'uint8') #[7:0]
+##        xcor_I1 = fread(fid, 1, 'uint8')
+#        
+#        fid.seek(0,0);  fid.seek(xcor_addr[1],1)
+#        xcor_Q2 = np.fromfile(fid, count=1, dtype=dt) #[15:8]
+#        xcor_I2 = np.fromfile(fid, count=1, dtype=dt) 
+##        xcor_Q2 = fread(fid, 1, 'uint8'); #[15:8]
+##        xcor_I2 = fread(fid, 1, 'uint8');
+#        
+#        fid.seek(0,0);  fid.seek(xcor_addr[2],1)
+#        xcor_Q3 = np.fromfile(fid, count=1, dtype=dt) #[23:16]
+#        xcor_I3 = np.fromfile(fid, count=1, dtype=dt) 
+##        xcor_Q3 = fread(fid, 1, 'uint8'); #[23:16]
+##        xcor_I3 = fread(fid, 1, 'uint8');  
+#        
+#        xcor_I_out[n] = xcor_I3*256**2 + xcor_I2*256 + xcor_I1
+#        xcor_Q_out[n] = xcor_Q3*256**2 + xcor_Q2*256 + xcor_Q1
+#        xcor_I_out[n] = xcor_I_out[n]-2**24 if(xcor_I_out[n]>=2**23) else xcor_I_out[n]        
+#        xcor_Q_out[n] = xcor_Q_out[n]-2**24 if(xcor_Q_out[n]>=2**23) else xcor_Q_out[n]                
+##        xcor_I_out[n] = ifelse(xcor_I_out(n)>2^23, xcor_I_out(n)-2^24, xcor_I_out(n));
+##        xcor_Q_out(n) = ifelse(xcor_Q_out(n)>2^23, xcor_Q_out(n)-2^24, xcor_Q_out(n));
+#    
+#    fid.seek(0,0)
+#    return list(map(np.complex, xcor_I_out,xcor_Q_out))
 
-#t1 = {'yr':2016,'mon':8,'day':2,'hr':3,'min':7,'sec':9,'msec':6,'usec':12,'nsec':9}
-#gps_isot = '{yr}-{mon:02}-{day:02}T{hr:02}:{min:02}:{sec:02}.{msec:03}{usec:03}'.format(**t1)
-#print gps_isot1
-##%%
-#gps_isot = '{:0{4}}-{:0{2}}-{:0{2}}T{:0{2}}:{:0{2}}:{:0{2}}.{:0{3}}{:0{3}}{:0{3}}'\
-#            .format(**gps_st)    

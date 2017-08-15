@@ -164,7 +164,7 @@ def sel_file(pathname,trange,array='m1'):
 def count_file_addr(filename,array='m1'):
     filesize = os.path.getsize(filename)
     framenum = filesize//FRAMESIZE_MUSER_I if array=='m1' \
-                else FRAMESIZE_MUSER_H
+                else filesize//FRAMESIZE_MUSER_H
     return framenum
 
 def get_files_addr(sel_files,trange,array='m1'):
@@ -239,7 +239,7 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
 #   check time-range and select the right datafiles in time-range
     bl2ord = mi.bl_tab(Nant)
     dfiles = sel_file(pathname,trange,array)
-    addr_dfiles = get_files_addr(dfiles,trange)
+    addr_dfiles = get_files_addr(dfiles,trange,array)
     fr_step = int(ttick/FRAME_TICK) 
     if isinstance(dfiles,list):
         Ntsl = len(dfiles)*[0]
@@ -250,8 +250,9 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
         Nts = [1] if (addr_dfiles[1]-addr_dfiles[0]+1)//fr_step == 0 \
                     else [(addr_dfiles[1]-addr_dfiles[0]+1)//fr_step]
     Nts = sum(Ntsl)
-    print( fr_step,Nts,Ntsl )
-    print(addr_dfiles); return
+#    print( fr_step,Nts,Ntsl )
+#    print(addr_dfiles); 
+#    return
     dout = {'x':np.zeros((Nbl,Nfreq,Nts),dtype='complex'), \
             'p':np.zeros((Nant,Nfreq,Nts)), \
             'GHz': np.zeros(Nts,dtype='S11'), \
