@@ -5,7 +5,8 @@ Created on Sun Jul 17 13:05:05 2016
 @author: Super
 """
 
-#%%        
+#%%    
+from imp import reload    
 import numpy as np
 import misc as mi
 import astropy.constants as con
@@ -52,13 +53,14 @@ UVMAX=max(uvwbl['u'].max(),uvwbl['v'].max())
 M = int(np.ceil(imsizecal(FOV,UVMAX)))
 #%%
 # read correlation data in
-filename = r'D:\MUSER_Rawdata\20151101\MUSER-1\dat\20151101-1208'
+#filename = "D:\\MUSER_Rawdata\\20151101\\MUSER-1\\dat\\20151101-1208"
+pathname = "D:\\MUSER_Rawdata\\20151101\\MUSER-1\\dat"
 trange = ['2015-11-01 12:08:50', '2015-11-01 12:08:51']
-dout = ri.rdraw(filename,trange,tdec=0,array='m1', 
+dout = ri.rdraw(pathname,trange,ttick=0,array='m1', 
           nant=40,rfind=0,pol='LL')
 #%%
 # Flag uvdata
-dout_flag = img.mflag('m1',uvwbl,dout['x'][:,0,0],antflaglist)          
+dout_flag = img.mflag('m1',uvwbl,dout['x'][:,8,0],antflaglist)          
 #%%
 # plot flagged uv distribution
 u_flag = ma.getdata(uvwbl['u'][uvwbl['u'].mask])

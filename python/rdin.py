@@ -241,13 +241,16 @@ def rdraw(pathname,trange,ttick=0,array='m1', \
     dfiles = sel_file(pathname,trange,array)
     addr_dfiles = get_files_addr(dfiles,trange,array)
     fr_step = int(ttick/FRAME_TICK) 
+    print('dfiles is:',dfiles)
+    print('fr_step is:',fr_step)
+    print('addr_dfiles is:',addr_dfiles)
     if isinstance(dfiles,list):
         Ntsl = len(dfiles)*[0]
         for ik,a in enumerate(addr_dfiles):
-            Ntsl[ik] =  1 if (a[1]-a[0]+1)//fr_step == 0 \
+            Ntsl[ik] =  1 if fr_step == 0 \
                         else (a[1]-a[0]+1)//fr_step
     else:
-        Nts = [1] if (addr_dfiles[1]-addr_dfiles[0]+1)//fr_step == 0 \
+        Nts = [1] if fr_step == 0 \
                     else [(addr_dfiles[1]-addr_dfiles[0]+1)//fr_step]
     Nts = sum(Ntsl)
 #    print( fr_step,Nts,Ntsl )
